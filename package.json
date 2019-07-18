@@ -1,9 +1,9 @@
 {
-  "name": "cordova-plugin-inappbrowser",
+  "name": "cordova-plugin-inappbrowser-url-scheme",
   "version": "1.1.0",
-  "description": "Cordova InAppBrowser Plugin",
+  "description": "Cordova InAppBrowser Plugin With Url Scheme",
   "cordova": {
-    "id": "cordova-plugin-inappbrowser",
+    "id": "cordova-plugin-inappbrowser-url-scheme",
     "platforms": [
       "android",
       "amazon-fireos",
@@ -18,7 +18,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/apache/cordova-plugin-inappbrowser"
+    "url": "https://github.com/iamport/cordova-plugin-inappbrowser"
   },
   "keywords": [
     "cordova",
