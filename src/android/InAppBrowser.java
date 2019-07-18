@@ -31,13 +31,10 @@ import android.provider.Browser;
 import android.text.InputType;
 import android.util.Log;
 import android.util.TypedValue;
-import android.view.*;
 import android.view.WindowManager.LayoutParams;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
-import android.webkit.*;
-import android.widget.*;
-import kr.iamport.IamportUrlSchemeHandler;
+
 import org.apache.cordova.*;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -47,8 +44,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.StringTokenizer;
+
+import kr.iamport.IamportUrlSchemeHandler;
 
 @SuppressLint("SetJavaScriptEnabled")
 public class InAppBrowser extends CordovaPlugin {
@@ -762,6 +760,7 @@ public class InAppBrowser extends CordovaPlugin {
      * The webview client receives notifications about appView
      */
     public class InAppBrowserClient extends WebViewClient {
+        public static final String iamportFilePrefix = "/_iamport_file_/";
         EditText edittext;
         CordovaWebView webView;
 
@@ -839,6 +838,70 @@ public class InAppBrowser extends CordovaPlugin {
             return false;
         }
 
+        @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+            String path = request.getUrl().getPath();
+            if (isLocalFile(path)) {
+                return getWebResourceResponseFromAsset(path);
+            }
+
+            return super.shouldInterceptRequest(view, request);
+        }
+
+        @TargetApi(Build.VERSION_CODES.KITKAT)
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+            if (isLocalFile(url)) {
+                return getWebResourceResponseFromAsset(url);
+            }
+
+            return super.shouldInterceptRequest(view, url);
+        }
+
+        private WebResourceResponse getWebResourceResponseFromAsset(String path) {
+            int idx = path.indexOf(iamportFilePrefix);
+
+            String assetPath = path.substring(idx + iamportFilePrefix.length());
+
+            try {
+                InputStream is = cordova.getActivity().getResources().getAssets().open(assetPath);
+
+                String mimeType = getMimeType(assetPath, is);
+
+                return new WebResourceResponse(mimeType, "UTF-8", is);
+            } catch (IOException e) {
+                return null;
+            }
+        }
+
+        private boolean isLocalFile(String path) {
+            if (path.contains(iamportFilePrefix)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        private String getMimeType(String path, InputStream stream) {
+            String mimeType = null;
+            try {
+                mimeType = URLConnection.guessContentTypeFromName(path); // Does not recognize *.js
+
+                if (mimeType == null) {
+                    if (path.endsWith(".js")) {
+                        // Make sure JS files get the proper mimetype to support ES modules
+                        mimeType = "application/javascript";
+                    } else {
+                        mimeType = URLConnection.guessContentTypeFromStream(stream);
+                    }
+                }
+            } catch (Exception ex) {
+                Log.e(LOG_TAG, "Unable to get mime type" + path, ex);
+            }
+
+            return mimeType;
+        }
 
         /*
          * onPageStarted fires the LOAD_START_EVENT
